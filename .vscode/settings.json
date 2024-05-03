@@ -1,3 +1,6 @@
 {
-	"editor.insertSpaces": false
+	"editor.insertSpaces": false,
+	"marquee.widgets.npm-stats.packageNames": [
+		"scribeai"
+	]
 }
