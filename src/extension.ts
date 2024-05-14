@@ -1,7 +1,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { Configuration, OpenAIApi } from "openai";
+import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from "openai";
 
 let openai: OpenAIApi | undefined = undefined;
 
@@ -129,7 +129,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			title: "Generating AI response...",
 			cancellable: true
 		}, async () => {
-			reply.text = "Write an elaborate, high quality docstring for the above function";
+			reply.text = "Write a docstring for the above code and use syntax of the coding language to format it.";
 			await askAI(reply);		
 		});
 	}));
@@ -214,26 +214,61 @@ export async function activate(context: vscode.ExtensionContext) {
 	 * @param thread 
 	 * @returns 
 	 */
-	function generatePromptV1(question: string, thread: vscode.CommentThread) {
+	async function generatePromptV1(question: string, thread: vscode.CommentThread) {
 		const rolePlay =
-			"I want you to act as a highly intelligent AI chatbot that has deep understanding of any coding language and its API documentations. I will provide you with a code block and your role is to provide a comprehensive answer to any questions or requests that I will ask about the code block. Please answer in as much detail as possible and not be limited to brevity. It is very important that you provide verbose answers.";
-		//const codeBlock = "class Log:\n    def __init__(self, path):\n        dirname = os.path.dirname(path)\n        os.makedirs(dirname, exist_ok=True)\n        f = open(path, \"a+\")\n\n        # Check that the file is newline-terminated\n        size = os.path.getsize(path)\n        if size > 0:\n            f.seek(size - 1)\n            end = f.read(1)\n            if end != \"\\n\":\n                f.write(\"\\n\")\n        self.f = f\n        self.path = path\n\n    def log(self, event):\n        event[\"_event_id\"] = str(uuid.uuid4())\n        json.dump(event, self.f)\n        self.f.write(\"\\n\")\n\n    def state(self):\n        state = {\"complete\": set(), \"last\": None}\n        for line in open(self.path):\n            event = json.loads(line)\n            if event[\"type\"] == \"submit\" and event[\"success\"]:\n                state[\"complete\"].add(event[\"id\"])\n                state[\"last\"] = event\n        return state";
-		const codeBlock = getCommentThreadCode(thread);
+			"I want you to act as a highly intelligent AI chatbot that has deep understanding of any coding language and its API documentations. I will provide you with a code block and your role is to provide a comprehensive answer to any questions or requests that I will ask about the code block. Please answer in as much detail as possible and not be limited to brevity. It is very important that you provide verbose answers and answer in markdown format.";
+		const codeBlock = await getCommentThreadCode(thread);
 		
 		let conversation = "Human: Who are you?\n\nAI: I am a intelligent AI chatbot\n\n";
 		
-		for (let i = 0; i < thread.comments.length; i++) {
-			if (thread.comments[i].label !== "NOTE") {
-				if (thread.comments[i].author.name === "VS Code") {
-					conversation += `Human: ${thread.comments[i].body}\n\n`;
-				} else if (thread.comments[i].author.name === "Scribe AI") {
-					conversation += `AI: ${thread.comments[i].body}\n\n`;
+		const filteredComments = thread.comments.filter(comment => comment.label !== "NOTE");
+
+		for (let i = Math.max(0, filteredComments.length - 8); i < filteredComments.length; i++) {
+				if (filteredComments[i].author.name === "VS Code") {
+					conversation += `Human: ${(filteredComments[i].body as vscode.MarkdownString).value}\n\n`;
+				} else if (filteredComments[i].author.name === "Scribe AI") {
+					conversation += `AI: ${(filteredComments[i].body as vscode.MarkdownString).value}\n\n`;
 				}
-			}
 		}
 		conversation += `Human: ${question}\n\nAI: `;
 
-		return rolePlay + "\n" + codeBlock + "\n\n\n" + conversation; 
+		return rolePlay + "\n```\n" + codeBlock + "\n```\n\n\n" + conversation; 
+	}
+
+	/**
+	 * Generates the prompt to pass to OpenAI ChatGPT API.
+	 * Prompt includes: 
+	 * - Role play text that gives context to AI
+	 * - Code block highlighted for the comment thread
+	 * - All of past conversation history + example conversation
+	 * - User's new question
+	 * @param question
+	 * @param thread 
+	 * @returns 
+	 */
+	async function generatePromptChatGPT(question: string, thread: vscode.CommentThread) {
+		const messages: ChatCompletionRequestMessage[] = [];
+		const rolePlay =
+			"I want you to act as a highly intelligent AI chatbot that has deep understanding of any coding language and its API documentations. I will provide you with a code block and your role is to provide a comprehensive answer to any questions or requests that I will ask about the code block. Please answer in as much detail as possible and not be limited to brevity. It is very important that you provide verbose answers and answer in markdown format.";
+		const codeBlock = await getCommentThreadCode(thread);
+		
+		messages.push({"role" : "system", "content" : rolePlay + "\nCode:\n```\n" + codeBlock + "\n```"});
+		messages.push({"role" : "user", "content" : "Who are you?"});
+		messages.push({"role" : "assistant", "content" : "I am a intelligent and helpful AI chatbot."});
+
+		const filteredComments = thread.comments.filter(comment => comment.label !== "NOTE");
+
+		for (let i = Math.max(0, filteredComments.length - 8); i < filteredComments.length; i++) {
+				if (filteredComments[i].author.name === "VS Code") {
+					messages.push({"role" : "user", "content" : `${(filteredComments[i].body as vscode.MarkdownString).value}`});
+				} else if (filteredComments[i].author.name === "Scribe AI") {
+					messages.push({"role" : "assistant", "content" : `${(filteredComments[i].body as vscode.MarkdownString).value}`});
+				}
+		}
+		messages.push({"role" : "user", "content" : `${question}`});
+
+
+		return messages; 
 	}
 
 	/**
@@ -250,8 +285,10 @@ export async function activate(context: vscode.ExtensionContext) {
 	 */
 	function generatePromptV2(question: string, thread: vscode.CommentThread) {
 		const rolePlay =
-			"I want you to act as a highly intelligent AI chatbot that has deep understanding of any coding language and its API documentations. I will provide you with a code block and your role is to provide a comprehensive answer to any questions or requests that I will ask about the code block. Please answer in as much detail as possible and not be limited to brevity. It is very important that you provide verbose answers.";
-		//const codeBlock = "class Log:\n    def __init__(self, path):\n        dirname = os.path.dirname(path)\n        os.makedirs(dirname, exist_ok=True)\n        f = open(path, \"a+\")\n\n        # Check that the file is newline-terminated\n        size = os.path.getsize(path)\n        if size > 0:\n            f.seek(size - 1)\n            end = f.read(1)\n            if end != \"\\n\":\n                f.write(\"\\n\")\n        self.f = f\n        self.path = path\n\n    def log(self, event):\n        event[\"_event_id\"] = str(uuid.uuid4())\n        json.dump(event, self.f)\n        self.f.write(\"\\n\")\n\n    def state(self):\n        state = {\"complete\": set(), \"last\": None}\n        for line in open(self.path):\n            event = json.loads(line)\n            if event[\"type\"] == \"submit\" and event[\"success\"]:\n                state[\"complete\"].add(event[\"id\"])\n                state[\"last\"] = event\n        return state";
+			"I want you to act as a highly intelligent AI chatbot that has deep understanding of any coding language and its API documentations. "
+			+ "I will provide you with a code block and your role is to provide a comprehensive answer to any questions or requests that I will ask about the code block. Please answer in as much detail as possible and not be limited to brevity. It is very important that you provide verbose answers. (When responding to the following prompt, please make sure to properly style your response using Github Flavored Markdown."
+			+ " Use markdown syntax for things like headings, lists, colored text, code blocks, highlights etc. Make sure not to mention markdown or stying in your actual response."
+			+ " Try to write code inside a single code block if possible)";
 		const codeBlock = getCommentThreadCode(thread);
 		
 		let conversation = "Human: Who are you?\n\nAI: I am a intelligent AI chatbot\n\n";
@@ -264,14 +301,10 @@ export async function activate(context: vscode.ExtensionContext) {
 	 * @param thread
 	 * @returns 
 	 */
-	function getCommentThreadCode(thread: vscode.CommentThread) {
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) {
-			return; // No open text editor
-		}
-		const document = editor.document;
+	async function getCommentThreadCode(thread: vscode.CommentThread) {
+		const document = await vscode.workspace.openTextDocument(thread.uri);
 		// Get selected code for the comment thread
-		return document.getText(thread.range);
+		return document.getText(thread.range).trim();
 	}
 
 	/**
@@ -283,11 +316,16 @@ export async function activate(context: vscode.ExtensionContext) {
 	 */
 	async function askAI(reply: vscode.CommentReply) {
 		const question = reply.text.trim();
-		const code = getCommentThreadCode(reply.thread);
 		const thread = reply.thread;
-		const prompt = generatePromptV1(question, thread);
 		const model = vscode.workspace.getConfiguration('scribeai').get('models') + "";
-		const humanComment = new NoteComment(question, vscode.CommentMode.Preview, { name: 'VS Code', iconPath: vscode.Uri.parse("https://img.icons8.com/fluency/96/null/user-male-circle.png") }, thread, thread.comments.length ? 'canDelete' : undefined);
+		let prompt = "";
+		let chatGPTPrompt: ChatCompletionRequestMessage[] = [];
+		if (model === "ChatGPT" || model === "gpt-4") {
+			chatGPTPrompt = await generatePromptChatGPT(question, thread);
+		} else {
+			prompt = await generatePromptV1(question, thread);
+		}
+		const humanComment = new NoteComment(new vscode.MarkdownString(question), vscode.CommentMode.Preview, { name: 'VS Code', iconPath: vscode.Uri.parse("https://img.icons8.com/fluency/96/null/user-male-circle.png") }, thread, thread.comments.length ? 'canDelete' : undefined);
 		thread.comments = [...thread.comments, humanComment];
 		
 		// If openai is not initialized initialize it with existing API Key 
@@ -301,22 +339,37 @@ export async function activate(context: vscode.ExtensionContext) {
 				apiKey: vscode.workspace.getConfiguration('scribeai').get('ApiKey'),
 			}));
 		}
-		
-		const response = await openai.createCompletion({
-			model: model === "ChatGPT" ? "text-chat-davinci-002-20230126" : model,
-			prompt: prompt,
-			//prompt: generatePromptV2(question, thread),
-			temperature: 0,
-			max_tokens: 1000,
-			top_p: 1.0,
-			frequency_penalty: 1,
-			presence_penalty: 1,
-			stop: ["Human:"],  // V1: "Human:"
-		});
+		if (model === "ChatGPT" || model === "gpt-4") {
+			const response = await openai.createChatCompletion({
+				model: (model === "ChatGPT" ? "gpt-3.5-turbo" : "gpt-4"),
+				messages: chatGPTPrompt,
+				temperature: 0,
+				max_tokens: 1000,
+				top_p: 1.0,
+				frequency_penalty: 1,
+				presence_penalty: 1,
+			});
 
-		const responseText = response.data.choices[0].text ? response.data.choices[0].text : 'An error occured. Please try again...';
-		const AIComment = new NoteComment(responseText.trim().replace("<|im_end|>", ""), vscode.CommentMode.Preview, { name: 'Scribe AI', iconPath: vscode.Uri.parse("https://img.icons8.com/fluency/96/null/chatbot.png") }, thread, thread.comments.length ? 'canDelete' : undefined);
-		thread.comments = [...thread.comments, AIComment];
+			const responseText = response.data.choices[0].message?.content ? response.data.choices[0].message?.content : 'An error occured. Please try again...';
+			const AIComment = new NoteComment(new vscode.MarkdownString(responseText.trim()), vscode.CommentMode.Preview, { name: 'Scribe AI', iconPath: vscode.Uri.parse("https://img.icons8.com/fluency/96/null/chatbot.png") }, thread, thread.comments.length ? 'canDelete' : undefined);
+			thread.comments = [...thread.comments, AIComment];
+		} else {
+			const response = await openai.createCompletion({
+				model: model,
+				prompt: prompt,
+				//prompt: generatePromptV2(question, thread),
+				temperature: 0,
+				max_tokens: 500,
+				top_p: 1.0,
+				frequency_penalty: 1,
+				presence_penalty: 1,
+				stop: ["Human:"],  // V1: "Human:"
+			});
+
+			const responseText = response.data.choices[0].text ? response.data.choices[0].text : 'An error occured. Please try again...';
+			const AIComment = new NoteComment(new vscode.MarkdownString(responseText.trim()), vscode.CommentMode.Preview, { name: 'Scribe AI', iconPath: vscode.Uri.parse("https://img.icons8.com/fluency/96/null/chatbot.png") }, thread, thread.comments.length ? 'canDelete' : undefined);
+			thread.comments = [...thread.comments, AIComment];
+		}
 	}
 
 	/**
@@ -329,7 +382,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	 */
 	async function aiEdit(reply: vscode.CommentReply) {
 		const question = reply.text.trim();
-		const code = getCommentThreadCode(reply.thread);
+		const code = await getCommentThreadCode(reply.thread);
 		const thread = reply.thread;
 
 		// If openai is not initialized initialize it with existing API Key 
@@ -352,11 +405,10 @@ export async function activate(context: vscode.ExtensionContext) {
 			top_p: 1.0,
 		});
 		if (response.data.choices[0].text) {
-			const editor = vscode.window.activeTextEditor;
+			const editor = await vscode.window.showTextDocument(thread.uri);
 			if (!editor) {
 				return; // No open text editor
 			}
-			const document = editor.document;
 			editor.edit(editBuilder => {
 				editBuilder.replace(thread.range, response.data.choices[0].text + "");
 			});
@@ -371,7 +423,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	 */
 	function replyNote(reply: vscode.CommentReply) {
 		const thread = reply.thread;
-		const newComment = new NoteComment(reply.text, vscode.CommentMode.Preview, { name: 'VS Code', iconPath: vscode.Uri.parse("https://img.icons8.com/fluency/96/null/user-male-circle.png") }, thread, thread.comments.length ? 'canDelete' : undefined);
+		const newComment = new NoteComment(new vscode.MarkdownString(reply.text), vscode.CommentMode.Preview, { name: 'VS Code', iconPath: vscode.Uri.parse("https://img.icons8.com/fluency/96/null/user-male-circle.png") }, thread, thread.comments.length ? 'canDelete' : undefined);
 		newComment.label = 'NOTE';
 		thread.comments = [...thread.comments, newComment];
 	}

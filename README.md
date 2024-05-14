@@ -1,4 +1,4 @@
-<div align="center" id="madewithlua">
+az<div align="center" id="madewithlua">
     <img src="./resources/chatbot.png" width=200>
 </div>
 
@@ -41,11 +41,17 @@ Scribe AI is a ChatGPT-like extension for VS Code. Now you can have an AI chatbo
 
 &nbsp;
 
-# 📢 v1.1.1 Update: ChatGPT Now Available
-You can now choose ChatGPT as the model you want to use by heading to `Code` -> `Preferences` -> `Settings`, find `ScribeAI` under `Extensions` and choose `ChatGPT` as your model.
-&nbsp;
+# 📢 v1.2.1 Update
+- `gpt-4` model is now available to choose for those people that have access to it.
 
-The GPT3 models are also now more performant thanks to experimentation with prompt engineering and tuning additional parameters. You can now expect to get longer and more detailed responses.
+# 📢 v1.2.0 Update
+- `code-davinci-002` no longer supported. OpenAI recently announced the shutdown of Codex models by March 23.
+- Markdown support! Answers provided by AI are now formatted in markdown to enable better readability.
+
+# 📢 v1.1.5 Update
+- Official ChatGPT is finally available! OpenAI recently officially announced the release of their ChatGPT API. 
+- You can now select the ChatGPT model by going to User Settings via `Code` -> `Preferences` -> `Settings` and under `Extensions` you will find `ScribeAI` settings. Or you can just search `ScribeAI` in search box. And you will find a option to choose your model. Go ahead and choose `ChatGPT` and restart your extension by clicking on `restart your extension` in the API key settings. Now you are using ChatGPT!
+- Notice how answers provided by ChatGPT is much more detailed and informant, it's amazing!!
 
 
 &nbsp;
@@ -105,12 +111,43 @@ The GPT3 models are also now more performant thanks to experimentation with prom
 
 # 🚀 Getting Started
 ## 📦 Installation
-- To use this extension, install it from the VSCode marketplace or download and install `.vsix` file from Releases.
+- To use this extension, you can either install it from the VSCode marketplace or download and install `.vsix` file from Releases.
+
+### 📑 Download extension from VSCode Marketplace
+- Click on the Extensions icon(Ctrl+Shift+X)
+
+- Search for `ScribeAI`
+
+- The extension on VSCode marketplace looks like this, click the install button.
+
+	![image](https://user-images.githubusercontent.com/26835888/218777021-59781cc1-788d-47e5-93bd-be1f8336f3ec.png)
+
+- Once installation is complete, go to settings and search for `ScribeAI` to add your OpenAI API key, when you install and use ScribeAI for the first time, it will ask you for your OpenAI API key. This is used by the extension to access the API and is only sent to OpenAI.
+
+	![OpenAI](https://user-images.githubusercontent.com/26835888/218778164-1dbc6040-d44f-46be-b4a0-45baf4779e1c.jpg)
+
+- When you are done adding the API key; reload/restart the extension to apply the changes
+
+- Go to the explorer in VSCode and open any file that you want to work on or edit. 
+
+- Inside the open or active editor click the ` + ` icon that often appears on the left
 
 - When you first use ScribeAI whether by `Ask AI` or `AI Edit`, it will ask you for your OpenAI API key. This is used by the extension to access the API and is only sent to OpenAI.
 <p align="center">
   <img src="./apiKeyInput.png" />
 </p>
+
+### 📑 Download and install `.vsix` file from Releases.
+- Click on releases tab.
+
+- You are redirected to a page that looks like this; Click on the preferred zipped file format; and download 
+
+	![image](https://user-images.githubusercontent.com/26835888/218781965-cce59390-fb10-42c0-9d88-d7444ead98cd.png)
+
+- Unzip the downloaded file, and open the folder with VSCode 
+
+- Go through the process elaborated above to add your OpenAI API key and setup ScribeAI for the first time
+
 
 ## ⚙️ Settings
 - You can also change your API key in User Settings via `Code` -> `Preferences` -> `Settings` and under `Extensions` you will find `ScribeAI` settings. Or you can just search `ScribeAI` in search box.
@@ -118,21 +155,15 @@ The GPT3 models are also now more performant thanks to experimentation with prom
   <img src="./userSettings.png" />
 </p>
 
-To find your OpenAI API key:
+### 🗝️ To find your OpenAI API key:
 1. Go to https://beta.openai.com/account/api-keys. You will need to log in (or sign up) to your OpenAI account.
 2. Click "Create new secret key", and copy it.
 3. You should then paste it into VS Code when prompted.
 
 
 - If you wish to change the AI model you use which by default is `code-davinci-002` (because it’s free currently), then you can change it in User Settings.
-- 💥 Remember to reset your extension and workspace when you change your settings. You can do that by clicking on `restart your extension` in the API key settings 💥
+- 💥 Remember to restart your extension and workspace when you change your settings. You can do that by clicking on `restart your extension` in the API key settings 💥
 
-
-&nbsp;
-
-> **Note**  
-> Temporarily, the extension is using Codex, a similar GPT model by OpenAI, instead of ChatGPT, since the official ChatGPT API is not out yet. We do this because using unofficial ChatGPT API is unsupported by OpenAI and it's not reliable. Our team has figured out a way to simulate ChatGPT using OpenAI's current available GPT models. You can choose between `code-davinci-002` and `text-davinci-003` in the User Settings. When the official ChatGPT API is out our team will immediately offer an option to choose the ChatGPT model. 
-> UPDATE: ChatGPT API is now out and we've added it to our extension. You can now find it in the settings to start using it!
 
 &nbsp;
 

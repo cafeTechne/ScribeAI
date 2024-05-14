@@ -1,8 +1,8 @@
 {
 	"name": "scribeai",
-	"displayName": "ScribeAI - ChatGPT & GPT extension for VSCode",
+	"displayName": "ChatGPT & GPT extension - ScribeAI",
 	"description": "🚀 Use ChatGPT & GPT right inside VSCode to enhance and automate your coding with AI-powered assistance",
-	"version": "1.1.2",
+	"version": "1.2.1",
 	"publisher": "AndrewZhang",
 	"private": true,
 	"icon": "resources/chatbot.png",
@@ -26,11 +26,14 @@
 	],
 	"keywords": [
 		"chatgpt",
+		"gpt3",
+		"gpt3.5",
+		"gpt4",
 		"openai",
 		"copilot",
 		"ai",
 		"refactor",
-		"docstring",
+		"bard",
 		"completion",
 		"javascript",
 		"typescript",
@@ -209,16 +212,16 @@
 				},
 				"scribeai.models": {
 					"type": "string",
-					"default": "code-davinci-002",
+					"default": "ChatGPT",
 					"enum": [
-						"code-davinci-002",
 						"text-davinci-003",
-						"ChatGPT"
+						"ChatGPT",
+						"gpt-4"
 					],
 					"enumDescriptions": [
-						"The Codex models are descendants of GPT-3 models that can understand and generate code.",
 						"GPT-3 models can understand and generate natural language.",
-						"Large language model trained by OpenAI that is optimized for dialogue."
+						"Large language model trained by OpenAI that is optimized for dialogue.",
+						"Large language model that performs better than ChatGPT. Only available for people that have access to GPT4."
 					],
 					"markdownDescription": "Choose the OpenAI model you want to use for generating your AI responses.\n\nYou can find more details about each model and their pricing [here](https://beta.openai.com/docs/models)."
 				}
@@ -232,14 +235,14 @@
 		"lint": "eslint \"src/**/*.ts\""
 	},
 	"devDependencies": {
-		"@types/node": "^16.11.7",
+		"@types/node": "^16.18.33",
 		"@types/vscode": "~1.65.0",
-		"@typescript-eslint/eslint-plugin": "^5.42.0",
-		"@typescript-eslint/parser": "^5.42.0",
-		"eslint": "^8.26.0",
-		"typescript": "^4.8.4"
+		"@typescript-eslint/eslint-plugin": "^5.59.7",
+		"@typescript-eslint/parser": "^5.59.7",
+		"eslint": "^8.41.0",
+		"typescript": "^4.9.5"
 	},
 	"dependencies": {
-		"openai": "^3.1.0"
+		"openai": "^3.2.1"
 	}
 }
